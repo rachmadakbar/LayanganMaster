@@ -8,26 +8,25 @@ import java.util.Random;
 
 
 import org.andengine.engine.camera.Camera;
+import org.andengine.engine.camera.hud.HUD;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.handler.timer.ITimerCallback;
 import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
-import org.andengine.entity.modifier.MoveXModifier;
 import org.andengine.entity.modifier.MoveYModifier;
 import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.scene.Scene;
-import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.extension.augmentedreality.BaseAugmentedRealityGameActivity;
 import org.andengine.opengl.font.Font;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.texture.ITexture;
+import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
-import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
 import org.andengine.opengl.texture.bitmap.BitmapTexture;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.TextureRegionFactory;
@@ -37,7 +36,7 @@ import org.andengine.util.HorizontalAlign;
 import org.andengine.util.adt.io.in.IInputStreamOpener;
 import org.andengine.util.debug.Debug;
 
-import android.graphics.Typeface;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -76,13 +75,15 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 	// Target sprite 
 	private ITexture mTextureCoin;
 	private ITextureRegion mTargetTextureRegion;
-	private LinkedList targetLL;
-	private LinkedList TargetsToBeAdded;
-	private int hitCount;
+	private LinkedList<Sprite> targetLL;
+	private LinkedList<Sprite> TargetsToBeAdded;
+	private int hitCount = 0;
 	// This one is for the font
-	private BitmapTextureAtlas mFontTexture;
+	//private BitmapTextureAtlas mFontTexture;
 	private Font mFont;
 	private Text score;
+	private HUD gameHUD;
+	
 
 	// ===========================================================
 	// Constructors
@@ -102,8 +103,26 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 
 		return new EngineOptions(true, ScreenOrientation.LANDSCAPE_SENSOR, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), camera);
 	}
+	
+	private void loadScoreFonts()
+	{
+	    FontFactory.setAssetBasePath("font/");
+	    final ITexture mainFontTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
 
+	    mFont = FontFactory.createStrokeFromAsset(this.getFontManager(), mainFontTexture, this.getAssets(), "LCD.ttf", 50, true, Color.WHITE, 2, Color.BLACK);
+	    mFont.load();
+	}
 
+	private void createHUD()
+	{
+	    gameHUD = new HUD();
+	 // CREATE SCORE TEXT
+	    score = new Text(20, 420, mFont, "Score: 0123456789", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
+	    //score.setAnchorCenter(0, 0);    
+	    score.setText("Score: 0");
+	    gameHUD.attachChild(score);
+	    camera.setHUD(gameHUD);
+	}
 	
 	public Scene onCreateScene() {
 		sensorManager = (SensorManager) this
@@ -124,7 +143,7 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 		});
 
 		scene = new Scene();
-		scene.setBackground(new Background(0,0,0,0));
+		//scene.setBackground(new Background(0,0,0,0));
 		
 		VertexBufferObjectManager vertexBufferObjectManager = this.getVertexBufferObjectManager();
 		// settings score to the value of the max score to make sure it appears
@@ -144,9 +163,11 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 		//scene.attachChild(score);
 		this.face = new Sprite(centerX, centerY, this.mFaceTextureRegion, this.getVertexBufferObjectManager());
 		scene.attachChild(this.face);
-		this.targetLL = new LinkedList();
-		this.TargetsToBeAdded = new LinkedList();
+		this.targetLL = new LinkedList<Sprite>();
+		this.TargetsToBeAdded = new LinkedList<Sprite>();
 		createSpriteSpawnTimeHandler();
+		loadScoreFonts();
+		createHUD();
 		
 		/* The actual collision-checking. */
 		scene.registerUpdateHandler(new IUpdateHandler() {
@@ -167,9 +188,9 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 					// if the targets collides with a projectile, remove the
 					// projectile and set the hit flag to true
 					if (_target.collidesWith(face)) {
-						removeSprite(_target, targets);
+						//removeSprite(_target, targets);
 						hit = true;
-						break;
+						//break;
 					}
 					
 					// if a projectile hit the target, remove the target, increment
@@ -178,7 +199,9 @@ public class MoveSprite extends BaseAugmentedRealityGameActivity implements Sens
 						removeSprite(_target, targets);
 						hit = false;
 						hitCount++;
-						//score.setText(String.valueOf(hitCount));
+						score.setText("Score: "+String.valueOf(hitCount));
+						//Log.d("skor", "hitcount "+hitCount);
+						
 					}
 				}
 
